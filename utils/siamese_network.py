@@ -20,9 +20,10 @@ class SiameseNetwork(nn.Module):
 
     def __init__(self):
         super(SiameseNetwork, self).__init__()
+        self. device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
         # Setting up the Sequential of CNN Layers
-        self.Vgg11=models.vgg11(pretrained=True)
+        self.Vgg11 = models.vgg11(pretrained=True)
         num_ftrs = self.Vgg11.classifier[6].in_features
         self.Vgg11.classifier[6] = nn.Linear(num_ftrs, 4)
         
@@ -49,6 +50,8 @@ class SiameseNetwork(nn.Module):
         return output1, output2
     
     def train_eval(self,model,optimizer,criterion,dataloaders,num_epochs = 70):
+        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        
         # Iterate throught the epochs
         train_dataloader=dataloaders['train']
         val_dataloader=dataloaders['val']
@@ -69,23 +72,23 @@ class SiameseNetwork(nn.Module):
                 running_acc=RunningMetric()   #precision
                 
                 #labelPT=np.ones(shape=(1,64))
-                labelPT=torch.ones(64) # 64 is the batch size
-                    #for i, (img0, img1, label) in enumerate(train_dataloader,0):
+                labelPT=torch.ones(64).to(self.device) # 64 is the batch size
+                
                 for l, (img0, img1, label) in enumerate(datos,0):
-                    img0, img1, label = img0.cuda(), img1.cuda(), label.cuda()
+                    img0, img1, label = img0.to(self.device), img1.to(self.device), label.to(self.device)
                     optimizer.zero_grad()     #llevar a cero..reiniciar
                     with torch.set_grad_enabled(phase=='train'):
                             # Pass in the two images into the network and obtain two outputs
-                            print(f"img0 {img0.shape}")
+                            
                             output1, output2 = model(img0, img1)
                             
                             #preds1-2 is the index of the max value of output1-2 for each image.
-                            _,preds1=torch.max(output1,1) 
-                            _,preds2=torch.max(output2,1) 
+                            _,preds1=torch.max(output1,1)
+                            _,preds2=torch.max(output2,1)
                             
                             labelP = torch.squeeze(label)
 
-                            preds3T=torch.ones(64) # 64 is the batch size
+                            preds3T=torch.ones(64).to(self.device) # 64 is the batch size
        
                             # Compare the two outputs and determine if they are similar or not
                             for idx, val in enumerate(preds1):
@@ -94,8 +97,6 @@ class SiameseNetwork(nn.Module):
                                     preds3T[idx]=0
                                 if preds2[idx]!=preds1[idx]:
                                     preds3T[idx]=1
-                            
-                            print('preds3T: ',preds3T)
 
                             # Pass the outputs of the networks and label into the loss function
                             loss_contrastive = criterion(output1, output2, label)
@@ -115,7 +116,7 @@ class SiameseNetwork(nn.Module):
                         # print('preds3TT',preds3TT)
                         # print('labelPT_tensor',labelPT_tensor)
                         print("Loss: {:.4f} Acc: {:.4f} ".format(running_loss(),running_acc()))
-                        print(f"Epoch number {epoch}/{num_epochs} Current loss {loss_contrastive.item()}")
+                        print(f"Epoch number {epoch+1}/{num_epochs} Current loss {loss_contrastive.item()}")
                         iteration_number += 10
                         self.counter.append(iteration_number)
                         self.loss_history.append(loss_contrastive.item())
