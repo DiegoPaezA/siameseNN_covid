@@ -2,7 +2,8 @@ import random
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-
+import os 
+from PIL import Image 
 
 class SiameseNetworkDataset(Dataset):
     """
@@ -14,48 +15,55 @@ class SiameseNetworkDataset(Dataset):
         image0, image1, label    
     
     """
-    def __init__(self,imageFolderDataset,transform=None):
+    def __init__(self,root_path,transform=None):
         """
         Initialize the dataset
         Args:
             imageFolderDataset (torchvision.datasets.ImageFolder): Pytorch ImageFolder class
             transform (torchvision.transforms): Pytorch transforms
         """
-        self.imageFolderDataset = imageFolderDataset    
+        self.root_path = root_path    
         self.transform = transform
-        self.len_dataset = len(imageFolderDataset)-1
+        self.classes = os.listdir(root_path)
+        self.classes_to_idx = {class_name:i for i, class_name in enumerate(self.classes)} 
+        self.img_paths, self.labels = self._make_samples()
+
+    def _make_samples(self):
+        samples_images = []
+        samples_classes = []
+        for cls_name in self.classes:
+            class_dir = os.path.join(self.root_path, cls_name)
+            for file_name in os.listdir(class_dir):
+                sample_path = os.path.join(class_dir, file_name)
+                samples_images.append(sample_path)
+                samples_classes.append(self.classes_to_idx[cls_name])
+        return samples_images, samples_classes 
+
+    def __getitem__(self,idx):
         
-    def __getitem__(self,index):
-        #img0_tuple = random.choice(self.imageFolderDataset)
-        idx = random.randint(0, self.len_dataset)
-        img0_tuple = self.imageFolderDataset[idx]
 
-        #We need to approximately 50% of images to be in the same class
-        should_get_same_class = random.randint(0,1) 
-        if should_get_same_class:
-            while True:
-                #Look untill the same class image is found
-                idx = random.randint(0, self.len_dataset)
-                img1_tuple = self.imageFolderDataset[idx] 
-                if img0_tuple[1] == img1_tuple[1]:
-                    break
+        path_img0 = self.img_paths[idx] 
+        label0 = self.labels[idx]
+
+        if random.randint(0,1) == 0:
+            idxs = np.argwhere(np.array(self.labels) == label0).flatten()
+            idxs = np.delete(idxs, label0)      #Prevent to select the same image twice. 
         else:
-
-            while True:
-                #Look untill a different class image is found
-                idx = random.randint(0, self.len_dataset)
-                img1_tuple = self.imageFolderDataset[idx] 
-                if img0_tuple[1] != img1_tuple[1]:
-                    break
-
-        img0=img0_tuple[0]
-        img1=img1_tuple[0]            
+            idxs = np.argwhere(np.array(self.labels) != label0).flatten()
+ 
+        other_idx = np.random.choice(idxs)
+         
+        path_img1 = self.img_paths[other_idx]
+        label1 = self.labels[other_idx]
+       
+        img0 = Image.open(path_img0)
+        img1 = Image.open(path_img1)
 
         if self.transform is not None:
             img0 = self.transform(img0)
             img1 = self.transform(img1)
         
-        return img0, img1, torch.from_numpy(np.array([int(img1_tuple[1] != img0_tuple[1])], dtype=np.float32))
+        return img0, img1, torch.from_numpy(np.array([int(label0 != label1)], dtype=np.float32))
     
     def __len__(self):
-        return len(self.imageFolderDataset)
+        return len(self.img_paths)
