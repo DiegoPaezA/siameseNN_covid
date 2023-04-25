@@ -7,7 +7,7 @@ images, which in turn can be used in deep learning techniques for image processi
 when trying to recognise certain images within many classes of images. The Siamese Neural Network proposed here is configured with VGG11 and Loss Contraastive Function for the comparison of the pair of images. The results show an accuracy of 0.938
 during training and validation, and a loss rate of 0.078 during training.
 
-## Rede Siamesa
+## Siamese Neural Networks
 
 <img src="images\siameses_example.PNG" width="600" align="center"/>
 
