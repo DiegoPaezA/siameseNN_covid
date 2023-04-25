@@ -12,8 +12,7 @@ class SiameseNetwork(nn.Module):
     
     Args:
         nn.Module: Pytorch neural network module.
-    Returns:
-        None
+    
         
     
     """
@@ -33,24 +32,51 @@ class SiameseNetwork(nn.Module):
         self.loss = []
         
     def forward_once(self, x):
-        # This function will be called for both images
-        # It's output is used to determine the similiarity
-        #output = self.cnn1(x)
-        #output = output.view(output.size()[0], -1)
-        #output = self.fc1(output)
+        """
+        This function passes the input through the network once.
+        It's output is used to determine the similiarity
+        
+        Args:
+            x (torch.Tensor): Input tensor with shape (batch_size, channels, height, width)
+        
+        Returns:
+            output (torch.Tensor): Output tensor with shape (batch_size, embedding_size)
+        
+        """
         output =self.Vgg11(x)
         return output
 
     def forward(self, input1, input2):
-        # In this function we pass in both images and obtain both vectors
-        # which are returned
+        """
+        In this function we pass in both images and obtain both vectors
+        which are returned
+        
+        Args:
+            input1 (torch.Tensor): Input tensor with shape (batch_size, channels, height, width)
+            input2 (torch.Tensor): Input tensor with shape (batch_size, channels, height, width)
+        Returns:
+            output1 (torch.Tensor): Output tensor with shape (batch_size, embedding_size)
+            output2 (torch.Tensor): Output tensor with shape (batch_size, embedding_size)
+        """
         output1 = self.forward_once(input1)
         output2 = self.forward_once(input2)
 
         return output1, output2
     
     def train_eval(self,model,optimizer,criterion,dataloaders,num_epochs = 70):
-        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        """
+        This function is used to train and evaluate the Siamese Network.
+        
+        Args:
+            model (torch.nn.Module): Pytorch neural network module.
+            optimizer (torch.optim): Pytorch optimizer.
+            criterion (torch.nn): Pytorch loss function.
+            dataloaders (dict): Pytorch dataloaders.
+            num_epochs (int): Number of epochs to train the model.
+        Returns:
+            Model with the best weights.
+            metrics (dict): Dictionary with the training and validation metrics.
+        """
         
         # Iterate throught the epochs
         train_dataloader=dataloaders['train']
@@ -71,7 +97,7 @@ class SiameseNetwork(nn.Module):
                 running_loss=RunningMetric()  #perdida tasa de error de la error
                 running_acc=RunningMetric()   #precision
                 
-                #labelPT=np.ones(shape=(1,64))
+                
                 labelPT=torch.ones(64).to(self.device) # 64 is the batch size
                 
                 for l, (img0, img1, label) in enumerate(datos,0):
@@ -135,6 +161,13 @@ class SiameseNetwork(nn.Module):
 
 # Define the Contrastive Loss Function
 class ContrastiveLoss(torch.nn.Module):
+    """
+    This function implements the contrastive loss function.
+    Args:
+        margin (float): Margin to be used for the loss calculation.
+    Returns:
+        torch.Tensor: Contrastive loss value.
+    """
     def __init__(self, margin=2.0):
         super(ContrastiveLoss, self).__init__()
         self.margin = margin
@@ -149,14 +182,17 @@ class ContrastiveLoss(torch.nn.Module):
 
       return loss_contrastive
   
-class RunningMetric():      #CALCULAS PROMEDIOS EN EL TIEMPO
-  def __init__(self):
-    self.S = 0
-    self.N = 0
+class RunningMetric():
+    """
+    This functions are used to calculate the running average of the loss and accuracy.
+    """
+    def __init__(self):
+        self.S = 0
+        self.N = 0
     
-  def update(self, val_, size):
-    self.S += val_
-    self.N += size
+    def update(self, val_, size):
+        self.S += val_
+        self.N += size
     
-  def __call__(self):
-    return self.S/float(self.N)
+    def __call__(self):
+        return self.S/float(self.N)
