@@ -83,41 +83,19 @@ class SiameseNetwork(nn.Module):
                             _,preds1=torch.max(output1,1) 
                             _,preds2=torch.max(output2,1) 
                             
-                            #print(f"preds1 {preds1[0:5]}")
-                            #print(f"preds2 {preds2[0:5]}")
-                            #print(f"label {label[0:5]}")
-                            
-                            #preds2Array=preds2.cpu().numpy()
-                            #preds1Array=preds1.cpu().numpy()
-                            #labelP=label.cpu().numpy()
                             labelP = torch.squeeze(label)
-                            #print(f"preds1Array {preds1Array[0:5]}")
-                            #print(f"labelP {labelP[0:5]}")
 
-                            #preds3Array=np.ones(shape=(1,64))
-                            preds3Array=torch.ones(64) # 64 is the batch size
-                            #preds3Array = np.zeros(32)
-                            
+                            preds3T=torch.ones(64) # 64 is the batch size
+       
+                            # Compare the two outputs and determine if they are similar or not
                             for idx, val in enumerate(preds1):
                                 labelPT[idx]=labelP[idx]
                                 if preds2[idx]==preds1[idx]:
-                                    preds3Array[idx]=0
+                                    preds3T[idx]=0
                                 if preds2[idx]!=preds1[idx]:
-                                    preds3Array[idx]=1
+                                    preds3T[idx]=1
                             
-                            # for i, v in enumerate(preds1Array):
-                            #     #print('preds1Array',preds1Array[i])
-                            #     for j, v in enumerate(preds2Array):
-                            #         j=i
-                            #         labelPT[0][i]=labelP[i][0]
-                            #         if preds2Array[j]==preds1Array[i]:
-                            #             preds3Array[0][i]=0
-                            #         if preds2Array[j]!=preds1Array[i]:
-                            #             preds3Array[0][i]=1
-                            
-                            
-                            preds3ArrayT = torch.Tensor(list(preds3Array))
-                            labelPT_tensor = torch.Tensor(list(labelPT))
+                            print('preds3T: ',preds3T)
 
                             # Pass the outputs of the networks and label into the loss function
                             loss_contrastive = criterion(output1, output2, label)
@@ -131,16 +109,14 @@ class SiameseNetwork(nn.Module):
                     running_loss.update(loss_contrastive.item()*batch_size,batch_size)
                                               
 
-                    running_acc.update(torch.sum(preds3ArrayT==labelPT_tensor).float(),batch_size)
+                    running_acc.update(torch.sum(preds3T==labelPT).float(),batch_size)
                         
                     if l % 30 == 0  :
-                        # print('preds3ArrayT',preds3ArrayT)
+                        # print('preds3TT',preds3TT)
                         # print('labelPT_tensor',labelPT_tensor)
                         print("Loss: {:.4f} Acc: {:.4f} ".format(running_loss(),running_acc()))
-                        print(f"Epoch number {epoch}/{num_epochs} Current loss {loss_contrastive.item()}/{num_epochs}")
+                        print(f"Epoch number {epoch}/{num_epochs} Current loss {loss_contrastive.item()}")
                         iteration_number += 10
-                            #print('y',y)
-                            #counter.append(y)
                         self.counter.append(iteration_number)
                         self.loss_history.append(loss_contrastive.item())
                         self.acc.append(running_acc())
