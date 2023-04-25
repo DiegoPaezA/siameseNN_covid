@@ -122,6 +122,7 @@ def imshow(img, text=None):
     plt.imshow(np.transpose(npimg, (1, 2, 0)))
     plt.show()    
 
-def show_plot(iteration,loss):
+def show_plot(iteration,loss, name:str):
     plt.plot(iteration,loss)
     plt.show()
+    plt.title(f"{name} at epoch {iteration[-1]}")

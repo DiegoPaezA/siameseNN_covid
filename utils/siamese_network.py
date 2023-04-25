@@ -139,19 +139,14 @@ class SiameseNetwork(nn.Module):
                     running_acc.update(torch.sum(preds3T==labelPT).float(),batch_size)
                         
                     if l % 30 == 0  :
-                        # print('preds3TT',preds3TT)
-                        # print('labelPT_tensor',labelPT_tensor)
-                        print("Loss: {:.4f} Acc: {:.4f} ".format(running_loss(),running_acc()))
-                        print(f"Epoch number {epoch+1}/{num_epochs} Current loss {loss_contrastive.item()}")
+                        print(f"Epoch number {epoch+1}/{num_epochs}")
+                        print("Loss: {:.3f} Acc: {:.3f} ".format(running_loss(),running_acc()))
+                        #print(f"Epoch number {epoch+1}/{num_epochs} Current loss {round(loss_contrastive.item(),2)}")
                         iteration_number += 10
                         self.counter.append(iteration_number)
                         self.loss_history.append(loss_contrastive.item())
                         self.acc.append(running_acc())
                         self.loss.append(running_loss())
-                        # print('counter =',self.counter)
-                        # print('loss_history =',self.loss_history)
-                        # print('loss =',self.loss)
-                        # print('Acc =',self.acc)
         metrics = {
             'counter': self.counter, 
             'loss_history': self.loss_history, 
