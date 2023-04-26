@@ -19,10 +19,10 @@ class SiameseNetwork(nn.Module):
 
     def __init__(self):
         super(SiameseNetwork, self).__init__()
-        self. device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
         # Setting up the Sequential of CNN Layers
-        self.Vgg11 = models.vgg11(pretrained=True)
+        self.Vgg11 = models.vgg11(weights=True)
         num_ftrs = self.Vgg11.classifier[6].in_features
         self.Vgg11.classifier[6] = nn.Linear(num_ftrs, 4)
         
