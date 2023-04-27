@@ -34,6 +34,7 @@ def visualize_model(model, dataloaders, device, num_images=6):
 
 # Creating some helper functions
 def imshow(img, text=None):
+    
     npimg = img.cpu().numpy()
     plt.axis("off")
     if text:
@@ -85,3 +86,28 @@ def plot_training_curves(history:dict):
     plt.grid(True)
     plt.show()
 
+def compare_images(image_1:torch.tensor, image_2:torch.tensor, class_name:list, text:str=None):
+    """
+    Compare two images and print the class of each image.
+    Args:
+        image_1 (torch.tensor): Pytorch tensor with the first image.
+        image_2 (torch.tensor): Pytorch tensor with the second image.
+        class_name (list): List with the class names.
+    Returns:
+        None
+    """
+    image_1 = image_1.cpu().numpy()
+    image_2 = image_2.cpu().numpy()
+    
+    fig, ax = plt.subplots(1, 2, figsize=(8, 8))
+    ax[0].imshow(np.transpose(image_1,(1, 2, 0)))
+    ax[0].set_title(f"Class: {class_name[0]}")
+    ax[0].axis('off')
+    ax[1].imshow(np.transpose(image_2,(1, 2, 0)))
+    ax[1].set_title(f"Class: {class_name[1]}")
+    ax[1].axis('off')
+    
+    plt.tight_layout()
+    if text:
+        plt.text(-220, 18, text, style='italic',fontweight='bold',
+            bbox={'facecolor':'white', 'alpha':0.8, 'pad':10})
