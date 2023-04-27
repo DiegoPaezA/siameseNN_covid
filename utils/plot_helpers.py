@@ -49,3 +49,39 @@ def show_plot(iteration,loss, name:str, figsize=(5,5)):
     plt.title(f"{name} at epoch {len(iteration)}")
     plt.show();
     
+def plot_training_curves(history:dict):
+    """
+    Plot training curves for accuracy and loss metrics.
+    Args: 
+        history (dict): Dictionary with the training and validation metrics.
+    return:
+        None
+
+
+    """
+    # Plot training & validation accuracy values
+
+    loss = history['loss_train']
+    val_loss = history['loss_val']
+    acc = history['acc_train']
+    val_acc = history['acc_val']
+    
+    plt.subplot(2, 1, 1)
+    plt.plot(acc)
+    plt.plot(val_acc)
+    plt.title('Model Training Curves')
+    plt.ylabel('Accuracy')
+    #plt.xlabel('Epoch')
+    plt.legend(['Train', 'Val'], loc='lower right')
+    plt.grid(True)
+    # Plot training & validation loss values
+    plt.subplot(2, 1, 2)
+    plt.plot(loss)
+    plt.plot(val_loss)
+    #plt.title('Model loss')
+    plt.ylabel('Loss')
+    plt.xlabel('Epochs')
+    plt.legend(['Train', 'Val'], loc='upper right')
+    plt.grid(True)
+    plt.show()
+
