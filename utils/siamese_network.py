@@ -116,7 +116,6 @@ class SiameseNetwork(nn.Module):
                             _,preds_cnn2 = torch.max(output2,1)
                             
                             label = torch.squeeze(label)
-
                             preds_siamese=torch.ones(64).to(self.device) # 64 is the batch size
        
                             # Compare the two outputs and determine if they are images of the same class
@@ -131,7 +130,6 @@ class SiameseNetwork(nn.Module):
                             loss_contrastive = criterion(output1, output2, label)
                             
                             if phase =='train':
-                                # backward pass
                                 # Calculate the backpropagation
                                 loss_contrastive.backward()
                                 # Optimize
