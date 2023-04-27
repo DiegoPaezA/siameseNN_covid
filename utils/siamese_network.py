@@ -27,9 +27,10 @@ class SiameseNetwork(nn.Module):
         self.Vgg11.classifier[6] = nn.Linear(num_ftrs, 4)
         
         self.counter = []
-        self.loss_history = []
-        self.acc =  []
-        self.loss = []
+        self.acc_train =  []
+        self.acc_val =  []
+        self.loss_train = []
+        self.loss_val = []
         
     def forward_once(self, x):
         """
@@ -79,12 +80,13 @@ class SiameseNetwork(nn.Module):
         """
         
         # Iterate throught the epochs
-        train_dataloader=dataloaders['train']
-        val_dataloader=dataloaders['val']
-        iteration_number=0
+        train_dataloader = dataloaders['train']
+        val_dataloader = dataloaders['val']
+        iteration_number = 0
+        
         for epoch in range(num_epochs):
             print('Epoch {}/{}'.format(epoch+1, num_epochs))
-            print('-'*10)
+            print('-'*30)
             y=0
             for phase in ['train','val']:
                 if phase == 'train':
@@ -92,66 +94,75 @@ class SiameseNetwork(nn.Module):
                     datos=train_dataloader
                 else: 
                     model.eval()
-                    datos=val_dataloader
+                    datos = val_dataloader
                 # Iterate over batches
-                running_loss=RunningMetric()  #perdida tasa de error de la error
-                running_acc=RunningMetric()   #precision
-                
-                
-                labelPT=torch.ones(64).to(self.device) # 64 is the batch size
-                
+                running_loss = RunningMetric()  #perdida tasa de error de la error
+                running_acc = RunningMetric()   #precision
+                              
+                label_batches = torch.ones(64).to(self.device)               
                 for l, (img0, img1, label) in enumerate(datos,0):
+                    # Take a batch of images and labels and send them to the device
                     img0, img1, label = img0.to(self.device), img1.to(self.device), label.to(self.device)
+                    
                     optimizer.zero_grad()     #llevar a cero..reiniciar
                     with torch.set_grad_enabled(phase=='train'):
-                            # Pass in the two images into the network and obtain two outputs
                             
+                            # Forward pass
+                            # Pass in the two images into the network and obtain two outputs
                             output1, output2 = model(img0, img1)
                             
-                            #preds1-2 is the index of the max value of output1-2 for each image.
-                            _,preds1=torch.max(output1,1)
-                            _,preds2=torch.max(output2,1)
+                            #preds_cnn1-2 is the index of the max value of output1-2 for each image.
+                            _,preds_cnn1 = torch.max(output1,1)
+                            _,preds_cnn2 = torch.max(output2,1)
                             
-                            labelP = torch.squeeze(label)
+                            label = torch.squeeze(label)
 
-                            preds3T=torch.ones(64).to(self.device) # 64 is the batch size
+                            preds_siamese=torch.ones(64).to(self.device) # 64 is the batch size
        
-                            # Compare the two outputs and determine if they are similar or not
-                            for idx, val in enumerate(preds1):
-                                labelPT[idx]=labelP[idx]
-                                if preds2[idx]==preds1[idx]:
-                                    preds3T[idx]=0
-                                if preds2[idx]!=preds1[idx]:
-                                    preds3T[idx]=1
+                            # Compare the two outputs and determine if they are images of the same class
+                            for idx, val in enumerate(preds_cnn1):
+                                label_batches[idx]=label[idx]
+                                if preds_cnn2[idx]==preds_cnn1[idx]:
+                                    preds_siamese[idx]=0
+                                if preds_cnn2[idx]!=preds_cnn1[idx]:
+                                    preds_siamese[idx]=1
 
                             # Pass the outputs of the networks and label into the loss function
                             loss_contrastive = criterion(output1, output2, label)
+                            
                             if phase =='train':
+                                # backward pass
                                 # Calculate the backpropagation
                                 loss_contrastive.backward()
                                 # Optimize
                                 optimizer.step()
                         
                     batch_size=img0.size()[0]
+                    
                     running_loss.update(loss_contrastive.item()*batch_size,batch_size)
-                                              
-
-                    running_acc.update(torch.sum(preds3T==labelPT).float(),batch_size)
+                    running_acc.update(torch.sum(preds_siamese==label_batches).float(),batch_size)
                         
-                    if l % 30 == 0  :
-                        print(f"Epoch number {epoch+1}/{num_epochs}")
-                        print("Loss: {:.3f} Acc: {:.3f} ".format(running_loss(),running_acc()))
-                        #print(f"Epoch number {epoch+1}/{num_epochs} Current loss {round(loss_contrastive.item(),2)}")
-                        iteration_number += 10
-                        self.counter.append(iteration_number)
-                        self.loss_history.append(loss_contrastive.item())
-                        self.acc.append(running_acc())
-                        self.loss.append(running_loss())
+                    if l % len(datos) == 0:
+                        if(phase=='train'):
+                            print(f"Epoch: {epoch+1}/{num_epochs}, updated train metrics, acc: {running_acc()}, loss: {round(running_loss(),3)}")
+                            self.counter.append(epoch)
+                            self.acc_train.append(running_acc().cpu().numpy())
+                            self.loss_train.append(running_loss())
+
+                        elif(phase=='val'):
+                            print(f"Epoch: {epoch+1}/{num_epochs}, updated val metrics, acc: {running_acc()}, loss: {round(running_loss(),3)}")
+                            self.acc_val.append(running_acc().cpu().numpy())
+                            self.loss_val.append(running_loss())
+                            print('-'*20)
+                    #print(f"Batch number {l}/{len(datos)}, len of img0 {len(img0)}, len of label {len(label)}")
+        
         metrics = {
             'counter': self.counter, 
-            'loss_history': self.loss_history, 
-            'acc': self.acc, 
-            'loss': self.loss}
+            'acc_train': self.acc_train,
+            'loss_train': self.loss_train,
+            'acc_val': self.acc_val,
+            'loss_val': self.loss_val}
+        
         return model, metrics
 
 # Define the Contrastive Loss Function
