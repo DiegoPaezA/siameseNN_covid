@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from tqdm import tqdm 
-from utils.loss_metrics import ContrastiveLoss, RunningMetric
+from utils.loss_metrics import RunningMetric
 from torchvision.models import vgg16, VGG16_Weights
 
 
