@@ -1,8 +1,9 @@
+import os
 import torch
 import torch.nn as nn
 from tqdm import tqdm 
 from utils.loss_metrics import RunningMetric
-from torchvision.models import vgg16, VGG16_Weights
+from torchvision.models import vgg16, VGG16_Weights, resnet50, ResNet50_Weights
 
 
 #create the Siamese Neural Network
@@ -14,16 +15,25 @@ class SiameseNetwork(nn.Module):
         nn.Module: Pytorch neural network module.
     """
 
-    def __init__(self):
+    def __init__(self, model_name='vgg16'):
+        """
+        init function for the Siamese Network.
+        Args:
+            model_name (str): Name of the model to use default: "vgg16", option = "resnet50"
+        Returns:
+            Class object.
+        """
         super(SiameseNetwork, self).__init__()
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-
-        # Setting up the Sequential of CNN Layers
-        weights = VGG16_Weights.DEFAULT
-        self.Vgg16 = vgg16(weights=weights)
-        #num_ftrs = self.Vgg16.classifier[6].in_features
-        #self.Vgg16.classifier[6] = nn.Linear(num_ftrs, 4)
-        self.Vgg16.classifier[6] = nn.Linear(in_features = self.Vgg16.classifier[6].in_features, out_features=4)
+        
+        if model_name == 'vgg16':      
+            weights = VGG16_Weights.DEFAULT
+            self.model = vgg16(weights=weights)
+            self.model.classifier[6] = nn.Linear(in_features = self.model.classifier[6].in_features, out_features=4)
+        elif model_name == 'resnet50':
+            weights = ResNet50_Weights.DEFAULT
+            self.model = resnet50(weights=weights)
+            self.model.fc = nn.Linear(in_features = self.model.fc.in_features, out_features=4)
         
         self.counter    = []
         self.acc_train  = []
@@ -43,7 +53,7 @@ class SiameseNetwork(nn.Module):
             output (torch.Tensor): Output tensor with shape (batch_size, embedding_size)
         
         """
-        output =self.Vgg16(x)
+        output =self.model(x)
         return output
 
     def forward(self, input1, input2):
@@ -148,8 +158,7 @@ class SiameseNetwork(nn.Module):
                             val_acc = running_acc().cpu().numpy()
                             val_loss = running_loss()
                             self.acc_val.append(val_acc)
-                            self.loss_val.append(val_loss)
-                            
+                            self.loss_val.append(val_loss)                                       
             # Print metrics and progress bar
             tqdm.write(f"Epoch {epoch + 1}/{num_epochs} - Training acc: {train_acc:.3f} - Training loss: {train_loss:.3f} - Validation acc: {val_acc:.3f} - Validation loss: {val_loss:.3f}")
         
