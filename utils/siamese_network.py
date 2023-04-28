@@ -65,7 +65,7 @@ class SiameseNetwork(nn.Module):
 
         return output1, output2
     
-    def train_eval(self,model,optimizer,criterion,dataloaders,num_epochs = 70):
+    def train_eval(self,model,optimizer,criterion,dataloaders,num_epochs = 10):
         """
         This function is used to train and evaluate the Siamese Network.
         
@@ -85,8 +85,8 @@ class SiameseNetwork(nn.Module):
         val_dataloader = dataloaders['val']
                 
         for epoch in range(num_epochs):
-            print('Epoch {}/{}'.format(epoch+1, num_epochs))
-            print('-'*30)
+            #print('Epoch {}/{}'.format(epoch+1, num_epochs))
+            #print('-'*30)
             
             for phase in ['train','val']:
                 if phase == 'train':
@@ -100,8 +100,9 @@ class SiameseNetwork(nn.Module):
                 running_acc = RunningMetric()   #precision
                               
                 label_batches = torch.ones(64).to(self.device)
-                               
-                for l, (img0, img1, label) in enumerate(datos,0):
+                # Number of batches in one epoch (train or val)
+                total_batches = len(datos)                
+                for l, (img0, img1, label) in tqdm(enumerate(datos,0), total=total_batches, desc=f'Epoch {epoch + 1}/{num_epochs} - {phase}'):
                     # Take a batch of images and labels and send them to the device
                     img0, img1, label = img0.to(self.device),img1.to(self.device), label.to(self.device)
                     #print(f"iteracion {l+1} de {len(datos)}")
@@ -140,19 +141,25 @@ class SiameseNetwork(nn.Module):
                     running_loss.update(loss_contrastive.item()*batch_size,batch_size)
                     running_acc.update(torch.sum(preds_siamese==label_batches).float(),batch_size)
                         
-                    if (l+1) / len(datos) == 1:
+                    if (l+1) / total_batches == 1:
                         if(phase=='train'):
-                            print(f"Epoch: {epoch+1}/{num_epochs}, updated train metrics, acc: {running_acc()}, loss: {round(running_loss(),3)}")
+                            train_acc = running_acc().cpu().numpy()
+                            train_loss = running_loss()
+                            
+                            #print(f"Epoch: {epoch+1}/{num_epochs}, updated train metrics, acc: {train_acc}, loss: {round(train_loss,3)}")
                             self.counter.append(epoch)
-                            self.acc_train.append(running_acc().cpu().numpy())
-                            self.loss_train.append(running_loss())
+                            self.acc_train.append(train_acc)
+                            self.loss_train.append(train_loss)
 
                         elif(phase=='val'):
-                            print(f"Epoch: {epoch+1}/{num_epochs}, updated val metrics, acc: {running_acc()}, loss: {round(running_loss(),3)}")
-                            self.acc_val.append(running_acc().cpu().numpy())
-                            self.loss_val.append(running_loss())
-                            print('-'*20)
-                    #print(f"Batch number {l}/{len(datos)}, len of img0 {len(img0)}, len of label {len(label)}")
+                            val_acc = running_acc().cpu().numpy()
+                            val_loss = running_loss()
+                            #print(f"Epoch: {epoch+1}/{num_epochs}, updated val metrics, acc: {val_acc}, loss: {round(val_loss,3)}")
+                            self.acc_val.append(val_acc)
+                            self.loss_val.append(val_loss)
+                            #print('-'*20)
+                    # Print metrics and progress bar
+            tqdm.write(f"Epoch {epoch + 1}/{num_epochs} - Training acc: {train_acc:.3f} - Training loss: {train_loss:.3f} - Validation acc: {val_acc:.3f} - Validation loss: {val_loss:.3f}")
         
         metrics = {
             'counter': self.counter, 
