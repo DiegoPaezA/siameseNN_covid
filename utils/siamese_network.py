@@ -5,6 +5,7 @@ from torchvision.models import vgg16, VGG16_Weights
 
 import torch.nn as nn
 
+from tqdm import tqdm 
 
 #create the Siamese Neural Network
 class SiameseNetwork(nn.Module):
