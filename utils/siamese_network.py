@@ -1,11 +1,9 @@
-import numpy as np
 import torch
-import torch.nn.functional as F
+import torch.nn as nn
+from tqdm import tqdm 
+from utils.loss_metrics import ContrastiveLoss, RunningMetric
 from torchvision.models import vgg16, VGG16_Weights
 
-import torch.nn as nn
-
-from tqdm import tqdm 
 
 #create the Siamese Neural Network
 class SiameseNetwork(nn.Module):
@@ -27,11 +25,11 @@ class SiameseNetwork(nn.Module):
         #self.Vgg16.classifier[6] = nn.Linear(num_ftrs, 4)
         self.Vgg16.classifier[6] = nn.Linear(in_features = self.Vgg16.classifier[6].in_features, out_features=4)
         
-        self.counter = []
-        self.acc_train =  []
-        self.acc_val =  []
+        self.counter    = []
+        self.acc_train  = []
+        self.acc_val    = []
         self.loss_train = []
-        self.loss_val = []
+        self.loss_val   = []
         
     def forward_once(self, x):
         """
@@ -84,10 +82,7 @@ class SiameseNetwork(nn.Module):
         train_dataloader = dataloaders['train']
         val_dataloader = dataloaders['val']
                 
-        for epoch in range(num_epochs):
-            #print('Epoch {}/{}'.format(epoch+1, num_epochs))
-            #print('-'*30)
-            
+        for epoch in range(num_epochs):           
             for phase in ['train','val']:
                 if phase == 'train':
                     model.train()
@@ -95,30 +90,31 @@ class SiameseNetwork(nn.Module):
                 else: 
                     model.eval()
                     datos = val_dataloader
-                # Iterate over batches
+                
                 running_loss = RunningMetric()  #perdida tasa de error de la error
                 running_acc = RunningMetric()   #precision
                               
                 label_batches = torch.ones(64).to(self.device)
+                
                 # Number of batches in one epoch (train or val)
-                total_batches = len(datos)                
+                total_batches = len(datos)
+                                
                 for l, (img0, img1, label) in tqdm(enumerate(datos,0), total=total_batches, desc=f'Epoch {epoch + 1}/{num_epochs} - {phase}'):
-                    # Take a batch of images and labels and send them to the device
+                    
                     img0, img1, label = img0.to(self.device),img1.to(self.device), label.to(self.device)
-                    #print(f"iteracion {l+1} de {len(datos)}")
-                    optimizer.zero_grad()     #llevar a cero..reiniciar
+                    
+                    optimizer.zero_grad()
                     with torch.set_grad_enabled(phase=='train'):
                             
                             # Forward pass
-                            # Pass in the two images into the network and obtain two outputs
                             output1, output2 = model(img0, img1)
                             
-                            #preds_cnn1-2 is the index of the max value of output1-2 for each image.
+                            #preds_cnn1-2 are the predicted classes for the two images
                             _,preds_cnn1 = torch.max(output1,1)
                             _,preds_cnn2 = torch.max(output2,1)
                             
                             label_p = torch.squeeze(label)
-                            preds_siamese=torch.ones(64).to(self.device) # 64 is the batch size
+                            preds_siamese=torch.ones(64).to(self.device)
        
                             # Compare the two outputs and determine if they are images of the same class
                             for idx, val in enumerate(preds_cnn1):
@@ -128,13 +124,12 @@ class SiameseNetwork(nn.Module):
                                 if preds_cnn2[idx]!=preds_cnn1[idx]:
                                     preds_siamese[idx]=1
 
-                            # Pass the outputs of the networks and label into the loss function
+                            # Calculate the loss
                             loss_contrastive = criterion(output1, output2, label)
                             
                             if phase =='train':
                                 # Calculate the backpropagation
                                 loss_contrastive.backward()
-                                # Optimize
                                 optimizer.step()
                         
                     batch_size=img0.size()[0]                 
@@ -145,8 +140,6 @@ class SiameseNetwork(nn.Module):
                         if(phase=='train'):
                             train_acc = running_acc().cpu().numpy()
                             train_loss = running_loss()
-                            
-                            #print(f"Epoch: {epoch+1}/{num_epochs}, updated train metrics, acc: {train_acc}, loss: {round(train_loss,3)}")
                             self.counter.append(epoch)
                             self.acc_train.append(train_acc)
                             self.loss_train.append(train_loss)
@@ -154,11 +147,10 @@ class SiameseNetwork(nn.Module):
                         elif(phase=='val'):
                             val_acc = running_acc().cpu().numpy()
                             val_loss = running_loss()
-                            #print(f"Epoch: {epoch+1}/{num_epochs}, updated val metrics, acc: {val_acc}, loss: {round(val_loss,3)}")
                             self.acc_val.append(val_acc)
                             self.loss_val.append(val_loss)
-                            #print('-'*20)
-                    # Print metrics and progress bar
+                            
+            # Print metrics and progress bar
             tqdm.write(f"Epoch {epoch + 1}/{num_epochs} - Training acc: {train_acc:.3f} - Training loss: {train_loss:.3f} - Validation acc: {val_acc:.3f} - Validation loss: {val_loss:.3f}")
         
         metrics = {
@@ -169,41 +161,3 @@ class SiameseNetwork(nn.Module):
             'loss_val': self.loss_val}
         
         return model, metrics
-
-# Define the Contrastive Loss Function
-class ContrastiveLoss(torch.nn.Module):
-    """
-    This function implements the contrastive loss function.
-    Args:
-        margin (float): Margin to be used for the loss calculation.
-    Returns:
-        torch.Tensor: Contrastive loss value.
-    """
-    def __init__(self, margin=2.0):
-        super(ContrastiveLoss, self).__init__()
-        self.margin = margin
-
-    def forward(self, output1, output2, label):
-      # Calculate the euclidian distance and calculate the contrastive loss
-      euclidean_distance = F.pairwise_distance(output1, output2, keepdim = True)
-
-      loss_contrastive = torch.mean((1-label) * torch.pow(euclidean_distance, 2) +
-                                    (label) * torch.pow(torch.clamp(self.margin - euclidean_distance, min=0.0), 2))
-
-
-      return loss_contrastive
-  
-class RunningMetric():
-    """
-    This functions are used to calculate the running average of the loss and accuracy.
-    """
-    def __init__(self):
-        self.S = 0
-        self.N = 0
-    
-    def update(self, val_, size):
-        self.S += val_
-        self.N += size
-    
-    def __call__(self):
-        return self.S/float(self.N)
