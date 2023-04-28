@@ -103,7 +103,7 @@ class SiameseNetwork(nn.Module):
                 for l, (img0, img1, label) in enumerate(datos,0):
                     # Take a batch of images and labels and send them to the device
                     img0, img1, label = img0.to(self.device),img1.to(self.device), label.to(self.device)
-                    print(f"iteracion {l+1} de {len(datos)}")
+                    #print(f"iteracion {l+1} de {len(datos)}")
                     optimizer.zero_grad()     #llevar a cero..reiniciar
                     with torch.set_grad_enabled(phase=='train'):
                             
@@ -135,9 +135,7 @@ class SiameseNetwork(nn.Module):
                                 # Optimize
                                 optimizer.step()
                         
-                    batch_size=img0.size()[0]
-                    
-                    
+                    batch_size=img0.size()[0]                 
                     running_loss.update(loss_contrastive.item()*batch_size,batch_size)
                     running_acc.update(torch.sum(preds_siamese==label_batches).float(),batch_size)
                         
