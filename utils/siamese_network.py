@@ -23,7 +23,8 @@ class SiameseNetwork(nn.Module):
         Returns:
             Class object.
         """
-        super(SiameseNetwork, self).__init__()
+        #super(self,SiameseNetwork).__init__() # inherit from nn.Module class
+        super().__init__() # inherit from nn.Module class
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         
         if model_name == 'vgg16':      
