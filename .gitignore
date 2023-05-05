@@ -3,3 +3,4 @@ trainded_models/model_50vgg.pth
 trainded_models/model_60resnet_no_norm.pth
 trainded_models/model_60vgg_no_norm.pth
 trainded_models/model_100vgg.pth
+utils/__pycache__
