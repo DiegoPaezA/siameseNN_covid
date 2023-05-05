@@ -15,7 +15,7 @@ class SiameseNetwork(nn.Module):
         nn.Module: Pytorch neural network module.
     """
 
-    def __init__(self, model_name='vgg16'):
+    def __init__(self, model_name='vgg16', device='cpu'):
         """
         init function for the Siamese Network.
         Args:
@@ -25,7 +25,7 @@ class SiameseNetwork(nn.Module):
         """
         #super(self,SiameseNetwork).__init__() # inherit from nn.Module class
         super().__init__() # inherit from nn.Module class
-        self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        self.device = device
         
         if model_name == 'vgg16':      
             weights = VGG16_Weights.DEFAULT
